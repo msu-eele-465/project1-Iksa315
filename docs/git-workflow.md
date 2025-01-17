@@ -84,7 +84,7 @@ Please put your documentation (flowcharts, screenshots) and presentation in the 
     ```
 9. **Create the `interrupt` branch**:
     ```
-    git switch -c delay-loop 
+    git switch -c interrupt 
     ```
 10. **Do your development work**:
     ```
