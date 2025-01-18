@@ -64,7 +64,18 @@
 ;   November 2016
 ;   Built with Code Composer Studio v6.2.0
 ;******************************************************************************
-            .cdecls C,LIST,"msp430.h"  ; Include device header file
+;-------------------------------------------------------------------------------
+; EELE 465, Project 1, 18 January 2025
+; Iker Sal
+;
+; R14: Delay counter
+; R15: Inner delay counter
+;
+; P1.0: output, red LED
+; P6.6: output, green LED
+;-------------------------------------------------------------------------------
+			.cdecls C,LIST,"msp430.h"		; Include device header file
+
 ;-------------------------------------------------------------------------------
             .def    RESET                   ; Export program entry-point to
                                             ; make it known to linker.
@@ -75,18 +86,49 @@
             .retain                         ; Ensure current section gets linked
             .retainrefs
 
+;-------------------------------------------------------------------------------
 RESET       mov.w   #__STACK_END,SP         ; Initialize stack pointer
 StopWDT     mov.w   #WDTPW+WDTHOLD,&WDTCTL  ; Stop WDT
+
+;-------------------------------------------------------------------------------
+; Initialize
+;-------------------------------------------------------------------------------
 SetupP1     bic.b   #BIT0,&P1OUT            ; Clear P1.0 output
             bis.b   #BIT0,&P1DIR            ; P1.0 output
             bic.w   #LOCKLPM5,&PM5CTL0       ; Unlock I/O pins
 
-Mainloop    xor.b   #BIT0,&P1OUT            ; Toggle P1.0 every 0.1s
-Wait        mov.w   #50000,R15              ; Delay to R15
+;-------------------------------------------------------------------------------
+; Main loop
+;-------------------------------------------------------------------------------
+Mainloop:
+    mov.w   #0Ah, R14
+    call #blinkRed			; Blink the red LED once
+;--End Main-----------------------------------------------------------------------------
+
+
+;-------------------------------------------------------------------------------
+; Blink the Red LED
+;-------------------------------------------------------------------------------
+blinkRed:
+    xor.b   #BIT0,&P1OUT            ; Toggle P1.0
+    call #Wait
+;--End blinkRed-----------------------------------------------------------------------------
+
+;-------------------------------------------------------------------------------
+; Wait
+;-------------------------------------------------------------------------------
+Wait        mov.w   #0890Fh,R15              ; Delay to R15
 L1          dec.w   R15                     ; Decrement R15
             jnz     L1                      ; Delay over?
+            dec.w   R14
+            jnz     Wait
             jmp     Mainloop                ; Again
             NOP
+
+;--End Delay loop-----------------------------------------------------------------------------
+
+
+
 ;------------------------------------------------------------------------------
 ;           Interrupt Vectors
 ;------------------------------------------------------------------------------
