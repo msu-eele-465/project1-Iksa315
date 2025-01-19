@@ -93,9 +93,39 @@ StopWDT     mov.w   #WDTPW+WDTHOLD,&WDTCTL  ; Stop WDT
 ;-------------------------------------------------------------------------------
 ; Initialize
 ;-------------------------------------------------------------------------------
-SetupP1     bic.b   #BIT0,&P1OUT            ; Clear P1.0 output
-            bis.b   #BIT0,&P1DIR            ; P1.0 output
-            bic.w   #LOCKLPM5,&PM5CTL0       ; Unlock I/O pins
+;SetupP1
+
+    bic.b   #BIT0,&P1OUT            ; Clear P1.0 output
+    bis.b   #BIT0,&P1DIR            ; P1.0 output
+    bic.w   #LOCKLPM5,&PM5CTL0      ; Unlock I/O pins/Disable high z-mode
+
+;SetupP6.6 
+
+    bic.b	#BIT6, &P6SEL0
+    bic.b	#BIT6, &P6SEL1
+    bis.b	#BIT6, &P6DIR
+    bis.b	#BIT6, &P6OUT
+
+;Setup timer B0
+
+    bis.w	#TBCLR, &TB0CTL					; Clear timers & dividers
+    bis.w	#TBSSEL__ACLK, &TB0CTL			; Select ACLK (32768 Hz) as timer source
+    mov.w	#0803h, &TB0CCR0				; Set timer compare value
+    bis.w	#CNTL__12, &TB0CTL				; Choose 12-bit count length
+    bis.w	#ID__2, &TB0CTL					; Set div-by-2 in first divider
+    bis.w	#TBIDEX__8, &TB0EX0				; Set div-by-8 in second divider
+    bis.w	#CCIE, &TB0CCTL0				; Enable CCR interrupt
+    bic.w	#CCIFG, &TB0CCTL0				; Clear initial interrupt flag
+
+;Enable global interrupts
+
+    nop
+    bis.b	#GIE, SR
+    nop
+
+; Start the timer in upward counting mode
+
+    bis.w	#MC__UP, &TB0CTL
 
 ;-------------------------------------------------------------------------------
 ; Main loop
@@ -127,11 +157,19 @@ L1          dec.w   R15                     ; Decrement R15
 
 ;--End Delay loop-----------------------------------------------------------------------------
 
-
+;-- Timer B0 ISR (blink green LED) ---------------------------------------------
+toggleGreen:
+	xor.b	#BIT6, &P6OUT					; Toggle green LED (P6.6)
+	bic.w	#CCIFG, &TB0CCTL0				; Clear interrupt flag
+	reti
+;-- End Timer B0 ISR -----------------------------------------------------------
 
 ;------------------------------------------------------------------------------
 ;           Interrupt Vectors
 ;------------------------------------------------------------------------------
             .sect   RESET_VECTOR            ; MSP430 RESET Vector
             .short  RESET                   ;
+            
+            .sect	".int43"				; TB0CCR0 Interrupt
+			.short	toggleGreen
             .end
